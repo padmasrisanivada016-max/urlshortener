@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: shortener-postgres
+    environment:
+      POSTGRES_DB: urlshortener
+      POSTGRES_USER: shortener
+      POSTGRES_PASSWORD: shortener123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shortener -d urlshortener"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7
+    container_name: shortener-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    container_name: shortener-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/urlshortener
+      SPRING_DATASOURCE_USERNAME: shortener
+      SPRING_DATASOURCE_PASSWORD: shortener123
+      SPRING_DATA_REDIS_HOST: redis
+      APP_BASE_URL: http://localhost:8080/
+
+volumes:
+  pgdata:
